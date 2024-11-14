@@ -99,21 +99,21 @@ app.post('/persons', (req, res) => {
     res.json(note);
 });
 
-app.put('/api/notes/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const body = req.body;
-    const note = notes.find(note => note.id === id);
-    if (!note) {
-        return res.status(404).end();
-    }
+app.put('/persons/:id', (req, res) => {
+  const id = String(req.params.id);
+  const body = req.body;
+  const note = notes.find(note => note.id === id);
+  if (!note) {
+      return res.status(404).end();
+  }
 
-    const updatedNote = {
-        ...note,
-        important: body.important
-    };
+  const updatedNote = {
+      ...note,
+      number: body.number
+  };
 
-    notes = notes.map(note => note.id !== id ? note : updatedNote);
-    res.json(updatedNote);
+  notes = notes.map(note => note.id !== id ? note : updatedNote);
+  res.json(updatedNote);
 });
 
 const port = process.env.PORT || 3001;
