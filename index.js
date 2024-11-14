@@ -68,7 +68,7 @@ app.get('/persons', (_req, res) => {
     res.json(notes);
 });
 
-app.delete('/api/notes/:id', (req, res) => {
+app.delete('/persons/:id', (req, res) => {
     const id = Number(req.params.id);
     notes = notes.filter(note => note.id !== id);
     res.status(204).end();
