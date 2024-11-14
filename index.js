@@ -90,7 +90,7 @@ app.post('/persons', (req, res) => {
     }
 
     const note = {
-        id: generateId(),
+        id: String(Math.floor(Math.random() * 1000)),
         name: body.name,
         number: body.number
     };
