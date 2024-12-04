@@ -1,6 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const mongoose = require('mongoose');
+require('dotenv').config();
+
+const port = process.env.PORT || 3001;
+const url = process.env.URL;
 
 
 app.use(cors());
@@ -17,69 +22,54 @@ const requestLogger = (req, _res, next) => {
 
 app.use(requestLogger);
 
-let notes = [
-    {
-      "name": "Arto Hellas",
-      "number": "040-1234567",
-      "id": "1"
+mongoose.set('strictQuery', false);
+
+mongoose.connect(url)
+    .then(() => {
+        console.log('Conectado a MongoDB');
+    })
+    .catch((err) => {
+        console.error('Error conectándose a MongoDB:', err.message);
+        process.exit(1);
+    });
+
+const personSchema = new mongoose.Schema({
+    name: String,
+    number: String,
+});
+
+personSchema.set('toJSON', {
+    transform: (_document, returnedObject) => {
+        returnedObject.id = returnedObject._id.toString();
+        delete returnedObject._id;
+        delete returnedObject.__v;
     },
-    {
-      "name": "Ada Lovelace",
-      "number": "39-44-5323523",
-      "id": "2"
-    },
-    {
-      "name": "Dan Abramov",
-      "number": "12-43-234345",
-      "id": "3"
-    },
-    {
-      "name": "Mary Poppendieck",
-      "number": "39-23-6423122",
-      "id": "4"
-    },
-    {
-      "id": "d06e",
-      "name": "Francisco",
-      "number": "9931475979"
-    },
-    {
-      "id": "9207",
-      "name": "Hola",
-      "number": "2376273"
-    },
-    {
-      "id": "5ea3",
-      "name": "Francisco Vargas",
-      "number": "9931475979"
-    },
-    {
-      "id": "517f",
-      "name": "Francisco ihfiueh",
-      "number": "937297392739"
-    }
-  ];
+});
+
+const Person = mongoose.model('Person', personSchema);
+
 
 app.get('/', (_req, res) => {
     res.send('<h1>API REST FROM NOTES</h1>');
 });
 
 app.get('/persons', (_req, res) => {
-    res.json(notes);
+    Person.find({}).then(persons => {
+        res.json(persons);
+    });
 });
 
 app.delete('/persons/:id', (req, res) => {
-    const id = Number(req.params.id);
-    notes = notes.filter(note => note.id !== id);
-    res.status(204).end();
+    const id = req.params.id;
+    Person.findByIdAndDelete(id)
+        .then(() => {
+            res.status(204).end();
+        })
+        .catch(err => {
+            console.error('Error al eliminar la persona:', err.message);
+            res.status(400).end();
+        });
 });
-
-const generateId = () => {
-    const maxId = notes.length > 0
-        ? Math.max(...notes.map(n => n.id))
-        : 0;
-    return maxId + 1;
-};
 
 app.post('/persons', (req, res) => {
     const body = req.body;
@@ -90,33 +80,34 @@ app.post('/persons', (req, res) => {
     }
 
     const note = {
-        id: String(Math.floor(Math.random() * 1000)),
         name: body.name,
         number: body.number
     };
 
-    notes = [...notes, note];
-    res.json(note);
+    const person = new Person(note);
+    person.save().then(savedPerson => {
+        res.json(savedPerson);
+    });
 });
 
 app.put('/persons/:id', (req, res) => {
-  const id = String(req.params.id);
+  const id = req.params.id;
   const body = req.body;
-  const note = notes.find(note => note.id === id);
-  if (!note) {
-      return res.status(404).end();
-  }
-
-  const updatedNote = {
-      ...note,
-      number: body.number
+  
+  const note = {
+    name: body.name,
+    number: body.number
   };
-
-  notes = notes.map(note => note.id !== id ? note : updatedNote);
-  res.json(updatedNote);
+  
+  Person.findByIdAndUpdate(id, note, { new: true })
+    .then(updatedPerson => {
+      res.json(updatedPerson);
+    })
+    .catch(err => {
+      console.error('Error al actualizar la persona:', err.message);
+      res.status(400).end();
+    });
 });
-
-const port = process.env.PORT || 3001;
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
